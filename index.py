@@ -230,7 +230,7 @@ def sendMessage(msg,serverkey):
     serverkey = serverkey
     url = "https://sc.ftqq.com/{serverkey}.send".format(serverkey = serverkey)
     payload={'text': msg,
-    'desp': '本脚本开源免费使用 By https://github.com/PwnerZhang：Auto_Sign_For_NBU'}
+    'desp': '本脚本开源免费使用 By https://github.com/PwnerZhang/Auto_Sign_For_NBU'}
     files=[]
     headers = {
     'Cookie': ''
