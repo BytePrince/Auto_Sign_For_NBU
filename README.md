@@ -1,8 +1,8 @@
-## 说明
-
-本项目参考[ZimoLoveShuang/auto-sign](https://github.com/ZimoLoveShuang/auto-sign)，感谢子墨提供的模拟登陆模块。
-
 ### 核心功能
+
+1. 获取未签到任务
+2. 获取未签到任务详
+3. 提交签到表单
 
 如果你也想要尝试自己抓包编写代码，提供思路供参考。
 
@@ -25,6 +25,8 @@
 [今日校园自动打卡 NBU](https://pwner.cn/posts/7fdc2e69.html)
 
 ### 关于
+
+本项目参考[ZimoLoveShuang/auto-sign](https://github.com/ZimoLoveShuang/auto-sign)，感谢子墨提供的模拟登陆模块。
 
 本项目仅供学习交流使用，请勿用于商业用途。如果发现有商用行为，将关闭模拟登录接口。
 
