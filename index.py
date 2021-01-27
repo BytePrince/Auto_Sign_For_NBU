@@ -42,6 +42,7 @@ def getCpdailyApis(user):
         if one['name'] == user['school']:
             if one['joinType'] == 'NONE':
                 log(user['school'] + ' 未加入今日校园或者学校全称错误')
+                sendMessage('获取今日校园API错误-1! 请联系开发者！', user['server_key'])
                 exit(-1)
             flag = False
             params = {
@@ -67,6 +68,7 @@ def getCpdailyApis(user):
             break
     if flag:
         log(user['school'] + ' 未加入今日校园或者学校全称错误')
+        sendMessage('获取今日校园API错误-2! 请联系开发者！', user['server_key'])
         exit(-1)
     log(apis)
     return apis
@@ -90,6 +92,7 @@ def getSession(user, apis):
     log(cookieStr)
     if cookieStr == 'None':
         log(res.json())
+        sendMessage('模拟登陆失败! 请联系开发者！', user['server_key'])
         exit(-1)
 
     for line in cookieStr.split(';'):
@@ -97,6 +100,7 @@ def getSession(user, apis):
         cookies[name] = value
     session = requests.session()
     session.cookies = requests.utils.cookiejar_from_dict(cookies, cookiejar=None, overwrite=True)
+    log('模拟登陆成功...')
     return session
 
 
@@ -221,8 +225,10 @@ def submitForm(session, user, form, apis):
     message = res.json()['message']
     if message == 'SUCCESS':
         sendMessage('自动签到成功', user['server_key'])
+        log('自动签到成功！')
     else:
         sendMessage('自动签到失败，原因是：' + message, user['server_key'])
+        log('自动签到失败，原因是：' + message)
 
 
 # 发送微信通知
