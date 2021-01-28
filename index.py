@@ -118,8 +118,9 @@ def getUnSignedTasks(session, apis, user):
 
     res = session.post(
         url='https://{host}/wec-counselor-sign-apps/stu/sign/getStuSignInfosInOneDay'.format(host=apis['host']),
-        headers=headers, data=json.dumps({}) ,verify = False) 
-    if len(res.json()['datas']['signedTasks']) > 1: 
+        headers=headers, data=json.dumps({}) ,verify = False)
+    # log(res.json()['datas']['signedTasks'])
+    if len(res.json()['datas']['signedTasks']) == 1: 
         log('已完成签到，当前没有未签到任务。')
         sendMessage('自动签到成功！', user['server_key'])
         exit(-1)
