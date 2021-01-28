@@ -42,7 +42,6 @@ def getCpdailyApis(user):
         if one['name'] == user['school']:
             if one['joinType'] == 'NONE':
                 log(user['school'] + ' 未加入今日校园或者学校全称错误')
-                sendMessage('获取今日校园API错误-1! 请联系开发者！', user['server_key'])
                 exit(-1)
             flag = False
             params = {
@@ -68,7 +67,6 @@ def getCpdailyApis(user):
             break
     if flag:
         log(user['school'] + ' 未加入今日校园或者学校全称错误')
-        sendMessage('获取今日校园API错误-2! 请联系开发者！', user['server_key'])
         exit(-1)
     log(apis)
     return apis
@@ -92,7 +90,6 @@ def getSession(user, apis):
     log(cookieStr)
     if cookieStr == 'None':
         log(res.json())
-        sendMessage('模拟登陆失败! 请联系开发者！', user['server_key'])
         exit(-1)
 
     for line in cookieStr.split(';'):
@@ -100,7 +97,6 @@ def getSession(user, apis):
         cookies[name] = value
     session = requests.session()
     session.cookies = requests.utils.cookiejar_from_dict(cookies, cookiejar=None, overwrite=True)
-    log('模拟登陆成功...')
     return session
 
 
@@ -123,16 +119,27 @@ def getUnSignedTasks(session, apis, user):
     res = session.post(
         url='https://{host}/wec-counselor-sign-apps/stu/sign/getStuSignInfosInOneDay'.format(host=apis['host']),
         headers=headers, data=json.dumps({}) ,verify = False) 
-    if len(res.json()['datas']['leaveTasks']) < 1: 
-        log('当前没有未签到任务')
-        sendMessage('获取未签到任务失败！', user['server_key'])
+    if len(res.json()['datas']['signedTasks']) > 1: 
+        log('已完成签到，当前没有未签到任务。')
+        sendMessage('自动签到成功！', user['server_key'])
         exit(-1)
-    log(res.json())
-    latestTask = res.json()['datas']['leaveTasks'][0] 
-    return {
-        'signInstanceWid': latestTask['signInstanceWid'],
-        'signWid': latestTask['signWid']
-    }
+    else:
+        if len(res.json()['datas']['unSignedTasks']) < 1:
+            log('获取签到任务失败！')
+            sendMessage('获取签到任务失败！', user['server_key'])
+            exit(-1)
+        else:
+            log(res.json())
+            try:
+                latestTask = res.json()['datas']['unSignedTasks'][0]
+            except:
+                latestTask = res.json()['datas']['leaveTasks'][0] 
+            return {
+                'signInstanceWid': latestTask['signInstanceWid'],
+                'signWid': latestTask['signWid']
+            }
+
+
 
 #获取未签到任务详情
 def getDetailTask(session, params, apis ,user):
@@ -221,14 +228,12 @@ def submitForm(session, user, form, apis):
         'Connection': 'Keep-Alive'
     }
     res = session.post(url='https://{host}/wec-counselor-sign-apps/stu/sign/submitSign'.format(host=apis['host']),
-                       headers=headers, data=json.dumps(form))
+                       headers=headers, data=json.dumps(form) ,verify = False)
     message = res.json()['message']
     if message == 'SUCCESS':
         sendMessage('自动签到成功', user['server_key'])
-        log('自动签到成功！')
     else:
         sendMessage('自动签到失败，原因是：' + message, user['server_key'])
-        log('自动签到失败，原因是：' + message)
 
 
 # 发送微信通知
@@ -241,7 +246,7 @@ def sendMessage(msg,serverkey):
     headers = {
     'Cookie': ''
     }
-    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+    response = requests.request("POST", url, headers=headers, data=payload, files=files ,verify = False)
     log('Severchan运行结果:' + str(response.text))
 
 
@@ -252,7 +257,7 @@ def main():
         apis = getCpdailyApis(user)
         session = getSession(user, apis)
         params = getUnSignedTasks(session, apis, user)
-        task = getDetailTask(session, params, apis)
+        task = getDetailTask(session, params, apis, user)
         form = fillForm(task, session, user, apis)
         submitForm(session, user, form, apis)
 
