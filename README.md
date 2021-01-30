@@ -1,5 +1,7 @@
 ### 更新日志
 
+> 如果Linux下执行代码报错 FileNotFoundError: [Errno 2] No such file or directory: 'config.yml' ，请将`index.py`中`config.yml`的路径改为绝对路径。
+
 - **2021年1月30日：**
   - Serverchan近期服务不稳定，将微信通知改成更稳定的PushPlus
 
