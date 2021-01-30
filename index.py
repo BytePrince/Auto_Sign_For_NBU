@@ -237,18 +237,35 @@ def submitForm(session, user, form, apis):
         sendMessage('自动签到失败，原因是：' + message, user['server_key'])
 
 
+# # 发送微信通知
+# def sendMessage(msg,serverkey):
+#     serverkey = serverkey
+#     url = "https://sc.ftqq.com/{serverkey}.send".format(serverkey = serverkey)
+#     payload={'text': msg,
+#     'desp': '本脚本开源免费使用 By https://github.com/PwnerZhang/Auto_Sign_For_NBU'}
+#     files=[]
+#     headers = {
+#     'Cookie': ''
+#     }
+#     response = requests.request("POST", url, headers=headers, data=payload, files=files ,verify = False)
+#     log('Severchan运行结果:' + str(response.text))
+
 # 发送微信通知
 def sendMessage(msg,serverkey):
-    serverkey = serverkey
-    url = "https://sc.ftqq.com/{serverkey}.send".format(serverkey = serverkey)
-    payload={'text': msg,
-    'desp': '本脚本开源免费使用 By https://github.com/PwnerZhang/Auto_Sign_For_NBU'}
-    files=[]
-    headers = {
-    'Cookie': ''
+    token = serverkey 
+    title= msg 
+    content ='本脚本开源免费使用 By https://github.com/PwnerZhang/Auto_Sign_For_NBU' 
+    url = 'http://pushplus.hxtrip.com/send'
+    data = {
+        "token":token,
+        "title":title,
+        "content":content
     }
-    response = requests.request("POST", url, headers=headers, data=payload, files=files ,verify = False)
-    log('Severchan运行结果:' + str(response.text))
+    body=json.dumps(data).encode(encoding='utf-8')
+    headers = {'Content-Type':'application/json'}
+    response = requests.post(url,data=body,headers=headers)
+    log('PushPlus运行结果:' + str(response.text))
+
 
 
 
