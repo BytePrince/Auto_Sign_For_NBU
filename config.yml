@@ -1,7 +1,7 @@
 #登陆相关配置
 login:
   #不需要更改
-  api: "http://188.131.144.191:8080/wisedu-unified-login-api-v1.0/api/login"
+  api: "http://{请自建登录服务}:8080/wisedu-unified-login-api-v1.0/api/login"
 #用户组配置
 users:
   #单个用户配置
