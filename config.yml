@@ -1,37 +1,34 @@
 #登陆相关配置
 login:
-  #不需要更改
-  api: "http://{请自建登录服务}:8080/wisedu-unified-login-api-v1.0/api/login"
+  #开放的模拟登陆api服务器地址
+  api: "请自建"
 #用户组配置
 users:
   #单个用户配置
   - user:
       #username 学号
-      username: '17600xxxx'
+      username: '********'
       #password 密码
-      password: 'xxxxxxxxxx'
+      password: '********'
       #address 地址，定位信息
-      address: 中国xx省xx市xx区xx路xx
-      #server_key PushPlus的Token，获取方法：https://pushplus.hxtrip.com/message
-      server_key: xxxxxxxxxxxxxxxx
+      address: xxxxxxxxxx
+      #钉钉机器人得token和secret，机器人设置选择加签。
+      token: b41c9061498b2bc**************************aa1cd0e76c5440dd467
+      secret: SEC1a0a856c550***************************b18678b45ee081a7d25648b979a
       #school 学校全称
       school: 宁波大学
       #获取经度纬度链接http://api.map.baidu.com/lbsapi/getpoint/index.html
-      #填写你家的经纬度，即上方填写的 address 地址的经纬度，建议精确到小数点后6位
       #lon 经度
-      lon: xxx.xxxxxx
+      lon: 123.456789
       #lat 纬度
-      lat: xx.xxxxxx
-
-  #多用户配置，按照 - user 填写一份即可，不建议使用多用户配置
-
+      lat: 12.358468
 
 #今日校园相关配置
 cpdaily:
   #附加信息组默认选项配置，没有可留空
   defaults:
     - default:
-        title: 1. 今日您的健康情况是?（如有发热等呼吸道症状，请第一时间报备辅导员）
+        title: 今日您的健康情况是?（如有发热等呼吸道症状，请第一时间报备辅导员）
         value: A.健康
     #附加信息组默认选项配置，按顺序，可留空
     - default:

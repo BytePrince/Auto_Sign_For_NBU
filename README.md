@@ -2,12 +2,27 @@
 
 > 如果Linux下执行代码报错 FileNotFoundError: [Errno 2] No such file or directory: 'config.yml' ，请将`index.py`中`config.yml`的路径改为绝对路径。
 
+- **2021年3月23日：**
+
+  - PushPlus功能波动，更化成钉钉机器人通知（钉钉机器人密钥获取请自行参考官方文档）
+
+  - 修复接口错误，默认配置为`宁波大学`，其他大学请自行在**index.py**中设定
+
+    > 设定办法：
+    >
+    > 1. 访问 https://mobile.campushoy.com/v6/config/guest/tenant/list 获取本校`id`
+    > 2. 访问 https://mobile.campushoy.com/v6/config/guest/tenant/info?ids=学校id
+    > 3. 获取`idsUrl`、`ampUrl`、`ampUrl2`填入**index.py**
+    > 4. `login_url`请自行设定
+
 - **2021年1月30日：**
+  
   - Serverchan近期服务不稳定，将微信通知改成更稳定的PushPlus
-
+  
 - **2021年1月28日：**
+  
   - 修复离校签到改成常规签到了，已经修复，下载新的`index.py`替换原来的`index.py`即可，配置文件`config.yml`不需要变动。
-
+  
 - **2021年1月27日：**
   - 移除了冗余代码，适配了宁波大学的校外每日签到任务；
   - 修复了今日校园更换接口导致原有接口失效的问题；

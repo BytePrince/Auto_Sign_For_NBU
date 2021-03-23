@@ -1,17 +1,22 @@
+# -*- coding: utf-8 -*-
 import sys
-import requests
 import json
 import uuid
+import yaml
 import base64
+import requests
 from pyDes import des, CBC, PAD_PKCS5
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
-import oss2
-import yaml
-import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+import time
+from dingtalkchatbot.chatbot import DingtalkChatbot
 
 
-urllib3.disable_warnings()
+debug = False
+if debug:
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
 
 
 def getYmlConfig(yaml_file='config.yml'):
@@ -21,61 +26,51 @@ def getYmlConfig(yaml_file='config.yml'):
     config = yaml.load(file_data, Loader=yaml.FullLoader)
     return dict(config)
 
-config = getYmlConfig()
+config = getYmlConfig(yaml_file='config.yml')
+
+
 
 def getTimeStr():
     utc_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
     bj_dt = utc_dt.astimezone(timezone(timedelta(hours=8)))
     return bj_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+
+
 def log(content):
     print(getTimeStr() + ' ' + str(content))
     sys.stdout.flush()
 
 
+
 def getCpdailyApis(user):
     apis = {}
     user = user['user']
-    schools = requests.get(url='https://mobile.campushoy.com/v6/config/guest/tenant/list',verify = False).json()['data']
-    flag = True
-    for one in schools:
-        if one['name'] == user['school']:
-            if one['joinType'] == 'NONE':
-                log(user['school'] + ' 未加入今日校园或者学校全称错误')
-                exit(-1)
-            flag = False
-            params = {
-                'ids': one['id']
-            }
-            res = requests.get(url='https://mobile.campushoy.com/v6/config/guest/tenant/info', params=params ,verify = False)
-            data = res.json()['data'][0]
-            idsUrl = data['idsUrl']
-            ampUrl = data['ampUrl']
-            ampUrl2 = data['ampUrl2']
-            if 'campusphere' in ampUrl or 'cpdaily' in ampUrl:
-                parse = urlparse(ampUrl)
-                host = parse.netloc
-                apis[
-                    'login-url'] = idsUrl + '/login?service=' + parse.scheme + r"%3A%2F%2F" + host + r'%2Fportal%2Flogin'
-                apis['host'] = host
-            if 'campusphere' in ampUrl2 or 'cpdaily' in ampUrl2:
-                parse = urlparse(ampUrl2)
-                host = parse.netloc
-                apis[
-                    'login-url'] = idsUrl + '/login?service=' + parse.scheme + r"%3A%2F%2F" + host + r'%2Fportal%2Flogin'
-                apis['host'] = host
-            break
-    if flag:
-        log(user['school'] + ' 未加入今日校园或者学校全称错误')
-        exit(-1)
+    idsUrl = 'https://uis.nbu.edu.cn/authserver'
+    ampUrl = 'https://ehall.nbu.edu.cn/newmobile/client'
+    ampUrl2 = 'https://nbu.campusphere.net/wec-portal-mobile/client'
+    if 'campusphere' in ampUrl or 'cpdaily' in ampUrl:
+        parse = urlparse(ampUrl)
+        host = parse.netloc
+        apis[
+            'login-url'] = idsUrl + '/login?service=' + parse.scheme + r"%3A%2F%2F" + host + r'%2Fportal%2Flogin'
+        apis['host'] = host
+    if 'campusphere' in ampUrl2 or 'cpdaily' in ampUrl2:
+        parse = urlparse(ampUrl2)
+        host = parse.netloc
+        apis[
+            'login-url'] = idsUrl + '/login?service=' + parse.scheme + r"%3A%2F%2F" + host + r'%2Fportal%2Flogin'
+        apis['host'] = host
     log(apis)
     return apis
+
+
 
 
 def getSession(user, apis):
     user = user['user']
     params = {
-        'login_url': apis['login-url'],
+        'login_url': 'https://uis.nbu.edu.cn/authserver/login?service=https%3A%2F%2Fnbu.campusphere.net%2Fportal%2Flogin',
         'needcaptcha_url': '',
         'captcha_url': '',
         'username': user['username'],
@@ -83,9 +78,7 @@ def getSession(user, apis):
     }
 
     cookies = {}
-
-    res = requests.post(url=config['login']['api'], data=params)
-
+    res = requests.post(url=config['login']['api'], data=params, verify=not debug)
     cookieStr = str(res.json()['cookies'])
     log(cookieStr)
     if cookieStr == 'None':
@@ -100,9 +93,8 @@ def getSession(user, apis):
     return session
 
 
-#获取未签到任务
-def getUnSignedTasks(session, apis, user):
-    user = user['user']
+
+def getUnSignedTasks(session, apis):
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
@@ -111,40 +103,27 @@ def getUnSignedTasks(session, apis, user):
         'Accept-Language': 'zh-CN,en-US;q=0.8',
         'Content-Type': 'application/json;charset=UTF-8'
     }
-
+    # 第一次请求每日签到任务接口，主要是为了获取MOD_AUTH_CAS
     res = session.post(
         url='https://{host}/wec-counselor-sign-apps/stu/sign/getStuSignInfosInOneDay'.format(host=apis['host']),
-        headers=headers, data=json.dumps({}) ,verify = False)
-
+        headers=headers, data=json.dumps({}), verify=not debug)
+    # 第二次请求每日签到任务接口，拿到具体的签到任务
     res = session.post(
         url='https://{host}/wec-counselor-sign-apps/stu/sign/getStuSignInfosInOneDay'.format(host=apis['host']),
-        headers=headers, data=json.dumps({}) ,verify = False)
-    # log(res.json()['datas']['signedTasks'])
-    if len(res.json()['datas']['signedTasks']) == 1: 
-        log('已完成签到，当前没有未签到任务。')
-        sendMessage('自动签到成功！', user['server_key'])
+        headers=headers, data=json.dumps({}), verify=not debug)
+    if len(res.json()['datas']['unSignedTasks']) < 1:
+        log('当前没有未签到任务')
         exit(-1)
-    else:
-        if len(res.json()['datas']['unSignedTasks']) < 1:
-            log('获取签到任务失败！')
-            sendMessage('获取签到任务失败！', user['server_key'])
-            exit(-1)
-        else:
-            log(res.json())
-            try:
-                latestTask = res.json()['datas']['unSignedTasks'][0]
-            except:
-                latestTask = res.json()['datas']['leaveTasks'][0] 
-            return {
-                'signInstanceWid': latestTask['signInstanceWid'],
-                'signWid': latestTask['signWid']
-            }
+
+    latestTask = res.json()['datas']['unSignedTasks'][0]
+    return {
+        'signInstanceWid': latestTask['signInstanceWid'],
+        'signWid': latestTask['signWid']
+    }
 
 
 
-#获取未签到任务详情
-def getDetailTask(session, params, apis ,user):
-    user = user['user']
+def getDetailTask(session, params, apis):
     headers = {
         'Accept': 'application/json, text/plain, */*',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
@@ -155,15 +134,9 @@ def getDetailTask(session, params, apis ,user):
     }
     res = session.post(
         url='https://{host}/wec-counselor-sign-apps/stu/sign/detailSignInstance'.format(host=apis['host']),
-        headers=headers, data=json.dumps(params))
-    if (res.status_code == 200):
-        log('获取任务详情成功')
-        data = res.json()['datas']
-        return data
-    else:
-        sendMessage('获取任务详情失败！', user['server_key'])
-        exit(-1)
-
+        headers=headers, data=json.dumps(params), verify=not debug)
+    data = res.json()['datas']
+    return data
 
 
 
@@ -195,6 +168,18 @@ def fillForm(task, session, user, apis):
         form['position'] = user['address']
         form['uaIsCpadaily'] = True
         return form
+
+
+
+
+# 钉钉机器人通知
+def sendDingDing(msg, token, secret):
+    log('正在发送钉钉机器人通知...')
+    shijian = getTimeStr() + '\n'
+    webhook = 'https://oapi.dingtalk.com/robot/send?access_token={0}'.format(token)
+    secret = '{0}'.format(secret)
+    xiaoding = DingtalkChatbot(webhook, secret=secret)  # 方式二：勾选“加签”选项时使用（v1.5以上新功能）
+    xiaoding.send_text(str(shijian) + str(msg), is_at_all=False)
 
 
 def DESEncrypt(s, key='b3L26XNL'):
@@ -229,65 +214,39 @@ def submitForm(session, user, form, apis):
         'Connection': 'Keep-Alive'
     }
     res = session.post(url='https://{host}/wec-counselor-sign-apps/stu/sign/submitSign'.format(host=apis['host']),
-                       headers=headers, data=json.dumps(form) ,verify = False)
+                       headers=headers, data=json.dumps(form), verify=not debug)
     message = res.json()['message']
     if message == 'SUCCESS':
-        sendMessage('自动签到成功', user['server_key'])
+        log('自动签到成功')
+        sendDingDing('自动签到成功', user['token'], user['secret'])
     else:
-        sendMessage('自动签到失败，原因是：' + message, user['server_key'])
-
-
-# # 发送微信通知
-# def sendMessage(msg,serverkey):
-#     serverkey = serverkey
-#     url = "https://sc.ftqq.com/{serverkey}.send".format(serverkey = serverkey)
-#     payload={'text': msg,
-#     'desp': '本脚本开源免费使用 By https://github.com/PwnerZhang/Auto_Sign_For_NBU'}
-#     files=[]
-#     headers = {
-#     'Cookie': ''
-#     }
-#     response = requests.request("POST", url, headers=headers, data=payload, files=files ,verify = False)
-#     log('Severchan运行结果:' + str(response.text))
-
-# 发送微信通知
-def sendMessage(msg,serverkey):
-    token = serverkey 
-    title= msg 
-    content ='本脚本开源免费使用 By https://github.com/PwnerZhang/Auto_Sign_For_NBU' 
-    url = 'http://pushplus.hxtrip.com/send'
-    data = {
-        "token":token,
-        "title":title,
-        "content":content
-    }
-    body=json.dumps(data).encode(encoding='utf-8')
-    headers = {'Content-Type':'application/json'}
-    response = requests.post(url,data=body,headers=headers)
-    log('PushPlus运行结果:' + str(response.text))
+        log('自动签到失败，原因是：' + message)
+        sendDingDing('自动签到失败，原因是：' + message, user['token'], user['secret'])
+        exit(-1)
 
 
 
 
-# 主函数
 def main():
     for user in config['users']:
         apis = getCpdailyApis(user)
         session = getSession(user, apis)
-        params = getUnSignedTasks(session, apis, user)
-        task = getDetailTask(session, params, apis, user)
+        params = getUnSignedTasks(session, apis)
+        task = getDetailTask(session, params, apis)
         form = fillForm(task, session, user, apis)
         submitForm(session, user, form, apis)
+        
 
 
-# 启动函数
 def main_handler(event, context):
     try:
         main()
+    except Exception as e:
+        raise e
+    else:
         return 'success'
-    except:
-        return 'fail'
 
 
 if __name__ == '__main__':
-    main()
+    print('-----------------------------------------------------------------------------')
+    print(main_handler({}, {}))
